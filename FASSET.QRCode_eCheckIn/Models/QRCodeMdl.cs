@@ -17,8 +17,8 @@ namespace FASSET.QRCode_eCheckIn.Models
             TOTP = GenerateTOTP(); 
             // Generate and set the TOTP
             //var url = $"http://172.26.160.1%3A8077?timestamp={timestamp}&otp={TOTP}";               
-            var url = "https://localhost:44304/Registration/Index"; //For testing
-            //var url = $"https://eregistrator.azurewebsites.net/Registration/Index";
+            //var url = "https://localhost:44304/Registration/Index"; //For testing
+            var url = $"https://fasset-echeckin.azurewebsites.net/Registration/Index";
             return url;
         }
 

@@ -14,53 +14,60 @@ namespace FASSET.QRCode_eCheckIn.Controllers
         // GET: QRCode
         public ActionResult Index()
         {
-            var model = new QRCodeMdl();
-            var qrCodeContent = model.GetQRCodeContent();
-
-            // Check if the QR code is expired or TOTP is invalid
-            var expirationTimestamp = Request.QueryString["timestamp"];
-            var otp = Request.QueryString["otp"];
-            if (!string.IsNullOrEmpty(expirationTimestamp) && !string.IsNullOrEmpty(otp))
+            try
             {
-                var expirationTime = DateTime.ParseExact(expirationTimestamp, "yyyy-MM-dd-HH-mm-ss", null);
-                if (DateTime.UtcNow > expirationTime || otp != model.TOTP)
-                {
-                    // QR code expired or invalid OTP, return error view or handle as needed
-                    ViewBag.QRCodeExpired = true;
-                    return View(model);
-                }
-            }
+                var model = new QRCodeMdl();
+                var qrCodeContent = model.GetQRCodeContent();
 
-            using (var qrGenerator = new QRCoder.QRCodeGenerator()) // Corrected the usage of QRCodeGenerator here
-            using (var qrCodeData = qrGenerator.CreateQrCode(qrCodeContent, QRCoder.QRCodeGenerator.ECCLevel.Q))
-            using (var qrCode = new QRCoder.QRCode(qrCodeData))
-            using (var bitmap = qrCode.GetGraphic(20))
+                // Check if the QR code is expired or TOTP is invalid
+                var expirationTimestamp = Request.QueryString["timestamp"];
+                var otp = Request.QueryString["otp"];
+                if (!string.IsNullOrEmpty(expirationTimestamp) && !string.IsNullOrEmpty(otp))
+                {
+                    var expirationTime = DateTime.ParseExact(expirationTimestamp, "yyyy-MM-dd-HH-mm-ss", null);
+                    if (DateTime.UtcNow > expirationTime || otp != model.TOTP)
+                    {
+                        // QR code expired or invalid OTP, return error view or handle as needed
+                        ViewBag.QRCodeExpired = true;
+                        return View(model);
+                    }
+                }
+
+                using (var qrGenerator = new QRCoder.QRCodeGenerator()) // Corrected the usage of QRCodeGenerator here
+                using (var qrCodeData = qrGenerator.CreateQrCode(qrCodeContent, QRCoder.QRCodeGenerator.ECCLevel.Q))
+                using (var qrCode = new QRCoder.QRCode(qrCodeData))
+                using (var bitmap = qrCode.GetGraphic(20))
+                {
+                    // Load the logo image
+                    var logoPath = Server.MapPath("~/Content/download.jpg");
+                    using (var logo = Image.FromFile(logoPath))
+                    {
+                        var combinedImage = AddLogoToQRCode(bitmap, logo);
+
+                        //using (var stream = new MemoryStream())
+                        //{
+                        //    combinedImage.Save(stream, ImageFormat.Png);
+                        //    var qrCodeBase64 = Convert.ToBase64String(stream.ToArray());
+                        //    model.QRCodeImageUrl = $"data:image/png;base64,{qrCodeBase64}";
+                        //}
+                        string fileName = $"{DateTime.UtcNow:yyyyMMddHHmmss}.png";
+                        string filePath = Server.MapPath($"~/Content/QRCodeImages/{fileName}");
+                        combinedImage.Save(filePath, ImageFormat.Png);
+
+                        model.QRCodeImageUrl = Url.Content($"~/Content/QRCodeImages/{fileName}");
+
+                    }
+                }
+
+                TempData["QRCodeImageUrl"] = model.QRCodeImageUrl;
+                TempData["TOTP"] = model.TOTP;
+                return View(model);
+            }
+            catch (Exception ex)
             {
-                // Load the logo image
-                var logoPath = Server.MapPath("~/Content/download.jpg");
-                using (var logo = Image.FromFile(logoPath))
-                {
-                    var combinedImage = AddLogoToQRCode(bitmap, logo);
-
-                    //using (var stream = new MemoryStream())
-                    //{
-                    //    combinedImage.Save(stream, ImageFormat.Png);
-                    //    var qrCodeBase64 = Convert.ToBase64String(stream.ToArray());
-                    //    model.QRCodeImageUrl = $"data:image/png;base64,{qrCodeBase64}";
-                    //}
-                    string fileName = $"{DateTime.UtcNow:yyyyMMddHHmmss}.png";
-                    string filePath = Server.MapPath($"~/Content/QRCodeImages/{fileName}");
-                    combinedImage.Save(filePath, ImageFormat.Png);
-
-                    model.QRCodeImageUrl = Url.Content($"~/Content/QRCodeImages/{fileName}");
-
-                }
+                System.Diagnostics.Trace.TraceError(ex.ToString());
+                return View("Error");
             }
-
-            TempData["QRCodeImageUrl"] = model.QRCodeImageUrl;
-            TempData["TOTP"] = model.TOTP;
-
-            return View(model);
         }
 
         private Bitmap AddLogoToQRCode(Bitmap qrCodeImage, Image logo)

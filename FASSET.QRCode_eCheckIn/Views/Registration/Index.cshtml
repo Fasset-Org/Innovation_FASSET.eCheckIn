@@ -243,18 +243,57 @@
             //        document.getElementById('geoLocationDisplay').value = "0,0";
             //        $('.Form').submit(); // Submit the form without geolocation
             //    });
-            $.getJSON('/Geolocation/GetGeolocation')
-                .done(function (response) {
-                    var geoLocation = response.lat + ',' + response.lon;
-                    console.log('Geolocation:', geoLocation);
-                    document.getElementById('geoLocationDisplay').value = geoLocation;
-                    $('.Form').submit(); // Submit the form programmatically
-                })
-                .fail(function (error) {
-                    console.error('Error fetching geolocation:', error);
-                    document.getElementById('geoLocationDisplay').value = "0,0";
-                    $('.Form').submit(); // Submit the form without geolocation
+            var geoInput = document.getElementById('geoLocationDisplay');
+
+            if (navigator.geolocation) {
+                // Disable the form inputs during the geolocation process
+                document.querySelectorAll('.Form input, .Form button').forEach(elem => {
+                    elem.disabled = true;
                 });
+
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    var latitude = position.coords.latitude;
+                    var longitude = position.coords.longitude;
+                    var geoLocation = latitude + ',' + longitude;
+
+                    // Console log geolocation for debugging
+                    console.log('Geolocation:', geoLocation);
+
+                    // Set the GeoLocation value in the hidden input
+                    geoInput.value = geoLocation;
+
+                    // Re-enable the form inputs after geolocation is done
+                    document.querySelectorAll('.Form input, .Form button').forEach(elem => {
+                        elem.disabled = false;
+                    });
+
+                    // Submit the form
+                    document.querySelector('.Form').submit();
+                }, function (error) {
+                    console.error('Error getting geo-location: ' + error.message);
+
+                    // Set a default value if geolocation fails
+                    var defaultGeo = "0,0";
+                    geoInput.value = defaultGeo;
+
+                    // Re-enable the form inputs after geolocation error
+                    document.querySelectorAll('.Form input, .Form button').forEach(elem => {
+                        elem.disabled = false;
+                    });
+
+                    // Submit the form even if geolocation fails
+                    document.querySelector('.Form').submit();
+                });
+            } else {
+                console.error('Geolocation is not supported by this browser.');
+
+                // Set a default value if geolocation is not supported
+                var defaultGeo = "0,0";
+                geoInput.value = defaultGeo;
+
+                // Submit the form without GeoLocation information
+                document.querySelector('.Form').submit();
+            }
         }
     </script>
 </body>
